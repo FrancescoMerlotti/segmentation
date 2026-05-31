@@ -37,6 +37,7 @@ parser.add_argument('--filename', type=str, help='Image name (full relative path
 parser.add_argument('--ratio', type=float, help='µm-to-pixel ratio.')
 args = parser.parse_args()
 # test args
+isExample = False
 if args.example:
     isExample = True
     image_path = 'raw/Example.jpg'
@@ -48,16 +49,17 @@ else:
 
 # (optional) µm-to-pixel ratio
 ratio = 1.
+isRatio = False
 if args.ratio:
-    isRatio = True
     ratio = args.ratio
+    isRatio = True
 
 # load the proper device
 device = 'cpu'
 if torch.cuda.is_available(): device = 'cuda'
 logger.info(f'Running on {device}.')
 
-# initialise automatic mask generator
+# initialise automatic mask generator (paper: https://arxiv.org/abs/2408.00714)
 sam = sam_model_registry['vit_b'](checkpoint='sam_vit_b_01ec64.pth')
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(
@@ -84,11 +86,14 @@ logger.info(f'Evaluation time: {delta_time}.')
 
 # define output name
 out_name = f'Segmented-{date}-{time}'
-if isRatio: out_name += '-µm' 
 if isExample: out_name = 'Segmented-Example'
+if isRatio: out_name += '-µm' 
 
 # creating pandas dataframe
-df = pd.DataFrame([{'area': mask_data['area']*ratio**2, 'bbox': mask_data['bbox']} for mask_data in masks])
+df = pd.DataFrame([{'area': mask_data['area']*ratio**2,
+                    'radius': np.sqrt(mask_data['area']/np.pi)*ratio,
+                    'diameter': 2.*np.sqrt(mask_data['area']/np.pi)*ratio,
+                    'bbox': mask_data['bbox']} for mask_data in masks])
 if not os.path.isdir('data'): os.mkdir('data')
 df.to_csv(f'data/{out_name}.csv', index=False)
 logger.info(f'Outputted data to data/{out_name}.csv')
