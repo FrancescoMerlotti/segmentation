@@ -27,7 +27,7 @@
 
 ## Example
 
-To run a example:
+To run the example:
 ``` bash
     python segmentation.py --example
     python analyse.py --filename data/Segmented-Example.csv
@@ -35,6 +35,13 @@ To run a example:
 
 - `segmentation.py` produces the segmentation information, stores it in a `.csv` file in the `data/` folder and produces a segmented image stored in the `processed/` folder.
 - `analyse.py` loads the information stored in the selected `.csv` file in the `data/` folder, produces some statistically relevant quantities, and produces a histogram stored in the `plots/` folder.
+
+Pre-processing of the image might be needed to increase the performance of the segmentation model. In particular increasing contrast could be helpful. Thus, run
+
+``` bash
+    python preprocess.py --filename preprocess/Test.jpg
+```
+
 
 ## Statistically relevant information
 
