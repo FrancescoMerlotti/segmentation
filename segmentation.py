@@ -34,6 +34,7 @@ logger = tronco.tronco()
 parser = argparse.ArgumentParser()
 parser.add_argument('--example', action='store_true', help='Run example.')
 parser.add_argument('--filename', type=str, help='Image name (full relative path, e.g., `raw/image-name.jpg`).')
+parser.add_argument('--ratio', type=float, help='µm-to-pixel ratio.')
 args = parser.parse_args()
 # test args
 if args.example:
@@ -44,6 +45,12 @@ else:
         image_path = args.filename
     else:
         raise ValueError('Missing arguments! Specify the path to the image to be segmented.')
+
+# (optional) µm-to-pixel ratio
+ratio = 1.
+if args.ratio:
+    isRatio = True
+    ratio = args.ratio
 
 # load the proper device
 device = 'cpu'
@@ -75,15 +82,13 @@ masks = mask_generator.generate(image_rgb)
 delta_time = str(datetime.datetime.now() - init).split('.')[0]
 logger.info(f'Evaluation time: {delta_time}.')
 
-# (Optional) You can convert the pixel area to real-world micrometers 
-# ratio = ...
-
 # define output name
 out_name = f'Segmented-{date}-{time}'
+if isRatio: out_name += '-µm' 
 if isExample: out_name = 'Segmented-Example'
 
 # creating pandas dataframe
-df = pd.DataFrame([{prop: mask_data[prop] for prop in ['area', 'bbox']} for mask_data in masks])
+df = pd.DataFrame([{'area': mask_data['area']*ratio**2, 'bbox': mask_data['bbox']} for mask_data in masks])
 if not os.path.isdir('data'): os.mkdir('data')
 df.to_csv(f'data/{out_name}.csv', index=False)
 logger.info(f'Outputted data to data/{out_name}.csv')

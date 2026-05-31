@@ -4,6 +4,8 @@ import pandas as pd
 from scipy.stats import skew
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({'font.family': 'sans-serif',})
+
 def compute_stats(df, column_name):
     data = df[column_name]
     # mean, median, mode
@@ -26,6 +28,7 @@ args = parser.parse_args()
 
 if not args.filename: raise ValueError('Missing argument! Provide the name of the file to analyse, e.g., `data/data-file.csv`.')
 filename = args.filename
+isRatio = '-µm' in filename
 # load dataframe
 df = pd.read_csv(filename)
 # compute results
@@ -33,9 +36,13 @@ results = compute_stats(df, 'area')
 for key, value in results.items(): print(f"{key:10}= {value:8.2f}")
 
 fig, ax = plt.subplots(1,1,figsize=(6,6))
-ax.hist(df['area'], bins=50)
-ax.set_xlabel('Size')
-ax.set_title('Size distribution')
+ax.hist(df['area'], bins=25, label=filename.split('/')[1].split('.')[0])
+if isRatio: ax.set_xlabel('Size [µm$^2$]', fontdict={'size': 12})
+else: ax.set_xlabel('Size', fontdict={'size': 12})
+ax.set_title('Size distribution', fontdict={'size': 20})
+ax.tick_params(axis="both", which="both", direction="in", labelsize=10)
+ax.grid(alpha=0.2, linestyle='--')
+ax.legend(frameon=False, markerfirst=False)
 if not os.path.isdir('plots'): os.mkdir('plots')
 fig.savefig('plots/'+filename.split('/')[1].split('.')[0]+'.pdf')
 
