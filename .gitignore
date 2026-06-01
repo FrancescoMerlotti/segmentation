@@ -2,3 +2,10 @@
 data/
 plots/
 processed/
+preprocess/*.tif
+raw/*.tif
+
+# apple crap
+.DS_Store
+# vscode crap
+.vscode/
