@@ -1,5 +1,6 @@
 import os
 import argparse
+import numpy as np
 import pandas as pd
 from scipy.stats import skew
 import matplotlib.pyplot as plt
@@ -35,21 +36,21 @@ df = pd.read_csv(filename)
 results = compute_stats(df, 'area')
 for key, value in results.items(): print(f"{key:10}= {value:8.2f}")
 
-fig, axs = plt.subplots(1,2,figsize=(12,6),sharey=True)
-axs[0].hist(df['area'], bins=25, label=filename.split('/')[1].split('.')[0])
-axs[1].hist(df['radius'], bins=25, label=filename.split('/')[1].split('.')[0])
-if isRatio:
-    axs[0].set_xlabel('Area [µm$^2$]', fontdict={'size': 12})
-    axs[1].set_xlabel('Radius [µm]', fontdict={'size': 12})
-else:
-    axs[0].set_xlabel('Area', fontdict={'size': 12})
-    axs[1].set_xlabel('Radius', fontdict={'size': 12})
-axs[0].set_title('Area distribution', fontdict={'size': 20})
-axs[1].set_title('Radius distribution', fontdict={'size': 20})
-for ax in axs:
+grid = {'radius': (0,0), 'diag-radius': (0,1), 'min-radius': (1,0), 'max-radius': (1,1),}
+
+fig, axs = plt.subplots(2,2,figsize=(12,6),sharex=True,sharey=True)
+add = ' [µm]' if isRatio else ''
+radii = np.array([df[rad] for rad in grid]).flatten()
+bins = np.linspace(0., np.max(radii), 50)
+for rad in grid:
+    axs[grid[rad]].hist(df[rad], bins=bins,)
+    axs[grid[rad]].set_xlabel(rad+add, fontdict={'size': 12})
+
+fig.suptitle(filename.split('/')[1].split('.')[0], fontsize=20)
+for ax in axs.flatten():
     ax.tick_params(axis="both", which="both", direction="in", labelsize=10)
     ax.grid(alpha=0.2, linestyle='--')
-    ax.legend(frameon=False, markerfirst=False)
+    # ax.legend(frameon=False, markerfirst=False)
 if not os.path.isdir('plots'): os.mkdir('plots')
 fig.savefig('plots/'+filename.split('/')[1].split('.')[0]+'.pdf')
 

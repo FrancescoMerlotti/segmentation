@@ -90,10 +90,13 @@ if isExample: out_name = 'Segmented-Example'
 if isRatio: out_name += '-µm' 
 
 # creating pandas dataframe
-df = pd.DataFrame([{'area': mask_data['area']*ratio**2,
-                    'radius': np.sqrt(mask_data['area']/np.pi)*ratio,
-                    'diameter': 2.*np.sqrt(mask_data['area']/np.pi)*ratio,
-                    'bbox': mask_data['bbox']} for mask_data in masks])
+df = pd.DataFrame([{'area': mask_data['area']*ratio**2,                                             # area
+                    'radius': np.sqrt(mask_data['area']/np.pi)*ratio,                               # assuming circular object
+                    'min-radius': np.min(mask_data['bbox'][2:])*ratio/2.,                           # minimum of width and height divided by 2
+                    'max-radius': np.max(mask_data['bbox'][2:])*ratio/2.,                           # maximum of width and height divided by 2
+                    'diag-radius': np.sqrt(np.sum(np.array(mask_data['bbox'][2:])**2))*ratio/2.,    # diagonal of bbox divided by 2
+                    'bbox': mask_data['bbox']} for mask_data in masks],                             # info about the bbox in pixels
+                    )
 if not os.path.isdir('data'): os.mkdir('data')
 df.to_csv(f'data/{out_name}.csv', index=False)
 logger.info(f'Outputted data to data/{out_name}.csv')
