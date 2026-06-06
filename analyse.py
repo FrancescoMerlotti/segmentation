@@ -17,8 +17,8 @@ def compute_stats(df, column_name):
     stats["iqr"] = q3 - q1
     # std deviation
     stats["std"] = data.std()
-    # skewness
-    stats["skewness"] = skew(data)
+    # # skewness
+    # stats["skewness"] = skew(data)
     # 95th percentile
     stats["95th"] = data.quantile(0.95)
     return stats
@@ -33,10 +33,12 @@ isRatio = '-µm' in filename
 # load dataframe
 df = pd.read_csv(filename)
 # compute results
-results = compute_stats(df, 'area')
-for key, value in results.items(): print(f"{key:10}= {value:8.2f}")
+for diam in ['fer-diam', 'diag-diam']:
+    results = compute_stats(df, diam)
+    print(diam+' statistical summary:')
+    for key, value in results.items(): print(f"\t{key:10}= {value:8.2f} µm")
 
-grid = {'radius': (0,0), 'diag-radius': (0,1), 'min-radius': (1,0), 'max-radius': (1,1),}
+grid = {'diam': (0,0), 'max-diam': (0,1), 'fer-diam': (1,0), 'diag-diam': (1,1),}
 
 fig, axs = plt.subplots(2,2,figsize=(12,6),sharex=True,sharey=True)
 add = ' [µm]' if isRatio else ''

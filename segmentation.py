@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
+from skimage import measure
 
 def show_masks_on_image(masks, ax):
     # test whether masks were found
@@ -23,6 +24,24 @@ def show_masks_on_image(masks, ax):
         random_color = np.concatenate([np.random.random(3), [0.45]]) 
         overlay_img[binary_mask] = random_color
     ax.imshow(overlay_img)
+
+def get_feret_radius(mask):
+    binary_mask = mask['segmentation']
+    label_image = binary_mask.astype(int)
+    props = measure.regionprops(label_image)
+    if len(props) > 0: return props[0].feret_diameter_max
+    return 0.
+
+def get_diameter_from_mask(mask):
+    contours = measure.find_contours(mask, level=0.5)
+    coords = max(contours, key=len) 
+    # RANSAC fit to find the circle
+    # residual_threshold is the 'tolerance' for pixel noise
+    model, inliers = measure.ransac(coords, measure.CircleModel, 
+                                    min_samples=3, 
+                                    residual_threshold=1.5)
+    _,_,radius = model.params
+    return radius*2.
 
 # initialise date and time
 init = datetime.datetime.now()
@@ -83,6 +102,9 @@ logger.info('Generating masks.')
 masks = mask_generator.generate(image_rgb)
 delta_time = str(datetime.datetime.now() - init).split('.')[0]
 logger.info(f'Evaluation time: {delta_time}.')
+# save to tmp file
+mask_stack = np.array([m['segmentation'] for m in masks])
+np.savez_compressed("spheres_masks.npz", masks=mask_stack)
 
 # define output name
 out_name = f'Segmented-{date}-{time}'
@@ -90,12 +112,14 @@ if isExample: out_name = 'Segmented-Example'
 if isRatio: out_name += '-µm' 
 
 # creating pandas dataframe
-df = pd.DataFrame([{'area': mask_data['area']*ratio**2,                                             # area
-                    'radius': np.sqrt(mask_data['area']/np.pi)*ratio,                               # assuming circular object
-                    'min-radius': np.min(mask_data['bbox'][2:])*ratio/2.,                           # minimum of width and height divided by 2
-                    'max-radius': np.max(mask_data['bbox'][2:])*ratio/2.,                           # maximum of width and height divided by 2
-                    'diag-radius': np.sqrt(np.sum(np.array(mask_data['bbox'][2:])**2))*ratio/2.,    # diagonal of bbox divided by 2
-                    'bbox': mask_data['bbox']} for mask_data in masks],                             # info about the bbox in pixels
+df = pd.DataFrame([{'area': mask_data['area']*ratio**2,                                         # area
+                    'diam': np.sqrt(mask_data['area']/np.pi)*2.*ratio,                          # assuming circular object
+                    'min-diam': np.min(mask_data['bbox'][2:])*ratio,                            # minimum of width and height divided by 2
+                    'max-diam': np.max(mask_data['bbox'][2:])*ratio,                            # maximum of width and height divided by 2
+                    'fer-diam': get_feret_radius(mask_data)*ratio,                              # maximum Feret's diameter
+                    'msk-diam': get_diameter_from_mask(mask_data['segmentation'])*ratio,        # maximum Feret's diameter
+                    'diag-diam': np.sqrt(np.sum(np.array(mask_data['bbox'][2:])**2))*ratio,     # diagonal of bbox divided by 2
+                    'bbox': mask_data['bbox']} for mask_data in masks],                         # info about the bbox in pixels
                     )
 if not os.path.isdir('data'): os.mkdir('data')
 df.to_csv(f'data/{out_name}.csv', index=False)
